@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: telegramfitnessbot-postgres
+    environment:
+      POSTGRES_DB: telegramfitnessbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - tfb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d telegramfitnessbot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+    container_name: telegramfitnessbot-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Telegram (DO NOT COMMIT REAL TOKENS; pass via env or .env)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-TelegramFitnessBot}
+
+      # DB
+      DB_URL: jdbc:postgresql://postgres:5432/telegramfitnessbot
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+      # Spring
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75"
+    ports:
+      - "8080:8080"
+
+volumes:
+  tfb_pgdata:
